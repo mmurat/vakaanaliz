@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Excel to JSON</title>
+</head>
+<body>
+    <input type="file" id="excelFileInput" accept=".xlsx, .xls" />
+    <button onclick="handleFile()">JSON'a Dönüştür ve Kaydet</button>
+
+    <script>
+        function handleFile() {
+            const fileInput = document.getElementById('excelFileInput');
+            const file = fileInput.files[0];
+
+            if (file) {
+                const reader = new FileReader();
+
+                reader.onload = function (e) {
+                    const data = e.target.result;
+                    const workbook = XLSX.read(data, { type: 'binary' });
+                    const jsonData = XLSX.utils.sheet_to_json(workbook.Sheets[workbook.SheetNames[0]], { header: 1 });
+
+                    // Verileri JSON dosyasına dönüştür
+                    const jsonString = JSON.stringify(jsonData, null, 2);
+
+                    // Kullanıcıdan dosya adı alın
+                    const fileName = prompt('JSON dosyasına bir ad verin (örneğin: veriler.json):');
+
+                    // Dosyayı indirme işlemi
+                    if (fileName) {
+                        const blob = new Blob([jsonString], { type: 'application/json' });
+                        const link = document.createElement('a');
+                        link.href = URL.createObjectURL(blob);
+                        link.download = fileName;
+                        link.click();
+                    }
+                };
+
+                reader.readAsBinaryString(file);
+            } else {
+                alert('Lütfen bir Excel dosyası seçin.');
+            }
+        }
+    </script>
+
+    
+    <script src="js/xlsx.full.min.js"></script>
+
+    <!-- <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.17.4/xlsx.full.min.js"></script> -->
+</body>
+</html>

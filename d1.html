@@ -1,0 +1,206 @@
+<!DOCTYPE html>
+
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>JSON'dan Koordinatları Yükle ve İşaretli Bölge Koordinat Sayısını Al</title>
+    <!-- Leaflet CSS dosyası -->
+
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+        integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="" />
+    <!-- Leaflet Draw CSS dosyası -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet-draw/dist/leaflet.draw.css" />
+
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+        }
+
+        #map {
+            height: 500px;
+            width: 100%;
+        }
+
+        #jsonFileInput {
+            margin: 10px 0;
+        }
+
+        #buttons {
+            margin: 10px 0;
+        }
+
+        button {
+            padding: 10px;
+            margin-right: 10px;
+        }
+
+        textarea {
+            width: 50%;
+            height: 100px;
+            margin: 10px 0;
+            padding: 10px;
+            box-sizing: border-box;
+        }
+
+        .custom-div-icon {
+            text-align: center;
+            line-height: 50px;
+            color: white;
+            /* background-color: #0077cc; */
+            border-radius: 50%;
+        }
+    </style>
+
+</head>
+
+<body>
+    <div id="map" style="height: 700px;"></div>
+    <input type="file" id="jsonFileInput" accept=".json" />
+    <button onclick="handleFile()">JSON'dan Koordinatları Yükle</button>
+    <button onclick="ekipler()">Ekipler</button>
+    <button onclick="mahalleCiz()">Mahelleri Çiz</button>
+    <button onclick="drawPolygon()">Poligon Çiz</button>
+    </div>
+    <div>
+        <p>
+            <textarea id="coordinateInput" placeholder="Enlem, Boylam; Enlem, Boylam; ..."></textarea>
+        </p>
+    </div>
+
+
+    <!-- Make sure you put this AFTER Leaflet's CSS -->
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+        integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+    <!-- Leaflet Draw JS dosyası -->
+    <script src="https://unpkg.com/leaflet-draw/dist/leaflet.draw.js"></script>
+
+    <script>
+        let map;
+        let seciliBolge;
+        let seciliKoordinatlar = [];
+        
+        fetch('veriler.json')
+                .then(response => response.json())
+                .then(data => {
+               let jsonData = data;
+               console.log(jsonData);
+
+                    // Koordinatları haritaya ekle
+/*                     jsonData.forEach(item => {
+                        const enlem = item[0];
+                        const boylam = item[1];
+
+                        // Küçük noktaları temsil eden circleMarker kullan
+                        var circleMarker = L.circleMarker([enlem, boylam], { radius: 0.001 }).addTo(map);
+                        circleMarker.setStyle({ color: 'red' });
+                    });
+
+                    console.log('JSON verisi başarıyla yüklendi ve haritaya eklendi.');
+ */                })
+                .catch(error => console.error('JSON verisi yüklenirken bir hata oluştu:', error));
+
+        const ekipKoordinatlar = [
+            // Ekip koordinatları burada...
+        ];
+
+
+        // Haritayı oluştur
+        map = L.map('map').setView([37.0000, 35.3213], 12);
+
+        // OpenStreetMap katmanını ekle
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: '© OpenStreetMap contributors'
+        }).addTo(map);
+
+        let mahalleLayer = L.geoJSON().on('click', mahalleClickHandler);
+
+        // Yerel dosyadan veriyi al
+        fetch('Adana.geojson')
+            .then(response => response.json())
+            .then(data => {
+                // Mahalle katmanına veriyi ekle
+                mahalleLayer.addData(data);
+
+                // Mahalle katmanını haritaya ekle
+                mahalleLayer.addTo(map);
+
+                // Haritayı mahalle sınırlarına otomatik olarak odakla
+                map.fitBounds(mahalleLayer.getBounds());
+
+                // Mahalle koordinatları içindeki veri sayılarını hesapla ve popup ile göster
+   /*              mahalleLayer.eachLayer(layer => {
+                    const mahalleId = layer.feature.properties.MAHALLE_ID; // Mahalle ID'sini al
+                    const mahalleKoordinatlar = jsonData.filter(item => layer.getBounds().contains([item[0], item[1]]));
+                    const vakaSayisi = mahalleKoordinatlar.length;
+
+                    // Popup içeriğini oluştur
+                    const popupContent = `Mahalle ID: ${mahalleId}<br> Koordinat Sayısı: ${vakaSayisi}`;
+
+                    // Mahalle sınırlarına popup ekleyerek bilgileri göster
+                    layer.bindPopup(popupContent);
+                }); */
+                map.fitBounds(mahalleLayer.getBounds());
+
+// Mahalle koordinatları içindeki veri sayılarını hesapla ve popup ile göster
+mahalleLayer.eachLayer(layer => {
+    const mahalleId = layer.feature.properties.MAHALLE_ID; // Mahalle ID'sini al
+    const mahalleKoordinatlar = jsonData.filter(item => layer.getBounds().contains([item[0], item[1]]));
+    const vakaSayisi = mahalleKoordinatlar.length;
+
+    // Popup içeriğini oluştur
+    const popupContent = `Mahalle ID: ${mahalleId}<br> Koordinat Sayısı: ${vakaSayisi}`;
+
+    // Mahalle sınırlarına popup ekleyerek bilgileri göster
+    layer.bindPopup(popupContent);
+});            
+            
+            
+            })
+            .catch(error => console.error('GeoJSON verisi alınamadı:', error));
+
+        // JSON verilerini yükle ve haritaya ekle
+        function loadJsonData() {
+            fetch('veriler.json')
+                .then(response => response.json())
+                .then(data => {
+                    jsonData = data;
+
+                    // Koordinatları haritaya ekle
+/*                     jsonData.forEach(item => {
+                        const enlem = item[0];
+                        const boylam = item[1];
+
+                        // Küçük noktaları temsil eden circleMarker kullan
+                        var circleMarker = L.circleMarker([enlem, boylam], { radius: 0.001 }).addTo(map);
+                        circleMarker.setStyle({ color: 'red' });
+                    });
+
+                    console.log('JSON verisi başarıyla yüklendi ve haritaya eklendi.');
+ */                })
+                .catch(error => console.error('JSON verisi yüklenirken bir hata oluştu:', error));
+        }
+
+
+        function mahalleClickHandler(event) {
+            var coordinates = event.latlng;
+            var numberOfCoordinates = event.layer.options.numberOfCoordinates;
+
+            L.popup()
+                .setLatLng(coordinates)
+                .setContent('Bu mahalle sınırları içinde ' + numberOfCoordinates + ' koordinat bulunmaktadır.')
+                .openOn(map);
+        }
+
+
+        // Sayfa yüklendiğinde JSON verilerini yükle ve haritaya ekle
+//        window.onload = loadJsonData;
+
+        // Diğer fonksiyonlar burada...
+    </script>
+</body>
+
+</html>

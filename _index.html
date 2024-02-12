@@ -1,0 +1,318 @@
+<!DOCTYPE html>
+
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>
+    JSON'dan Koordinatları Yükle ve İşaretli Bölge Koordinat Sayısını Al
+  </title>
+  <!-- Leaflet CSS dosyası -->
+
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+    integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="" />
+  <!-- Leaflet Draw CSS dosyası -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet-draw/dist/leaflet.draw.css" />
+
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      margin: 0;
+      padding: 0;
+    }
+
+    #map {
+      height: 500px;
+      width: 100%;
+    }
+
+    #buttons {
+      margin: 10px 0;
+    }
+
+    button {
+      padding: 10px;
+      margin-right: 10px;
+    }
+
+    textarea {
+      width: 50%;
+      height: 100px;
+      margin: 10px 0;
+      padding: 10px;
+      box-sizing: border-box;
+    }
+
+    .custom-div-icon {
+      text-align: center;
+      line-height: 50px;
+      color: white;
+      /* background-color: #0077cc; */
+      border-radius: 50%;
+    }
+  </style>
+</head>
+
+<body>
+  <div id="map" style="height: 700px"></div>
+  <button onclick="mEkle()">Mahalle Katmanı Ekle</button>
+  <button onclick="mSil()">Mahalle Katmanı Sil</button>
+  <button onclick="vEkle()">Vaka Katmanı Ekle</button>
+  <button onclick="vSil()">Vaka Katmanı Sil</button>
+
+
+
+  <!-- Make sure you put this AFTER Leaflet's CSS -->
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+    integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+  <!-- Leaflet Draw JS dosyası -->
+  <script src="https://unpkg.com/leaflet-draw/dist/leaflet.draw.js"></script>
+
+  <script>
+    let map;
+    let seciliBolge;
+    let seciliKoordinatlar = [];
+    let jsonData = [];
+
+    const ekipKoordinatlar = [
+      { id: 7110, enlem: 37.00016212301965, boylam: 35.31471490859985 },
+      { id: 7120, enlem: 36.99192743400605, boylam: 35.30134677886963 },
+      { id: 7140, enlem: 36.99192743400605, boylam: 35.30134677886963 },
+      { id: 7150, enlem: 36.98455744535248, boylam: 35.28114974498749 },
+      { id: 7160, enlem: 36.994832384477036, boylam: 35.35348355770111 },
+      { id: 7170, enlem: 36.973406837938654, boylam: 35.595563650131226 },
+      { id: 7180, enlem: 37.33469120079406, boylam: 34.80002045631409 },
+      { id: 7190, enlem: 37.02717780606166, boylam: 35.30905544757842 },
+      { id: 7210, enlem: 36.976676766468564, boylam: 35.33678412437439 },
+      { id: 7220, enlem: 37.05590917186811, boylam: 35.275479555130005 },
+      { id: 7230, enlem: 37.0370016452397, boylam: 35.3025484085083 },
+      { id: 7240, enlem: 37.02942189874413, boylam: 35.24606108665466 },
+      { id: 7250, enlem: 36.97930803550234, boylam: 35.36917984485626 },
+      { id: 7260, enlem: 37.014170184626686, boylam: 35.378122329711914 },
+      { id: 7270, enlem: 36.951006408144806, boylam: 35.31408727169037 },
+      { id: 7280, enlem: 36.973016837085005, boylam: 35.30623376369476 },
+      { id: 7290, enlem: 37.01417875145853, boylam: 35.281235575675964 },
+      { id: 7310, enlem: 37.04100533024167, boylam: 35.42135953903198 },
+      { id: 7320, enlem: 37.0475178255767, boylam: 35.23982226848602 },
+      { id: 7410, enlem: 37.54515577243407, boylam: 35.40492832660675 },
+      { id: 7420, enlem: 37.03856460621729, boylam: 35.819050669670105 },
+      { id: 7425, enlem: 37.01326637844141, boylam: 35.824833512306206 },
+      { id: 7426, enlem: 37.02616708617606, boylam: 35.82008600234985 },
+      { id: 7430, enlem: 37.02700649855302, boylam: 35.82259654998779 },
+      { id: 7435, enlem: 37.01432438745218, boylam: 35.80992043018341 },
+      { id: 7445, enlem: 37.25330395295523, boylam: 35.065505504608154 },
+      { id: 7450, enlem: 36.58857734234621, boylam: 35.38178086280823 },
+      { id: 7460, enlem: 37.25158743350214, boylam: 35.647727251052856 },
+      { id: 7470, enlem: 37.45277214778916, boylam: 35.8007150888443 },
+      { id: 7475, enlem: 37.4435134451063, boylam: 35.82667350769043 },
+      { id: 7480, enlem: 37.46698590137349, boylam: 35.825284123420715 },
+      { id: 7485, enlem: 37.46192325339841, boylam: 35.817071199417114 },
+      { id: 7486, enlem: 37.47739539958261, boylam: 35.8316570520401 },
+      { id: 7490, enlem: 37.81622567562785, boylam: 35.92034697532654 },
+      { id: 7510, enlem: 37.980659018078796, boylam: 36.08336091041565 },
+      { id: 7520, enlem: 38.25467391835536, boylam: 36.21558308601379 },
+      { id: 7530, enlem: 36.78129377816189, boylam: 35.797378420829766 },
+      { id: 7540, enlem: 37.43360613101333, boylam: 34.87244009971619 },
+      { id: 7610, enlem: 37.035263080986546, boylam: 35.26790499687195 },
+      { id: 7620, enlem: 37.034727800726856, boylam: 35.318196415901184 },
+      { id: 7630, enlem: 37.01109462958852, boylam: 35.39122760295868 },
+      { id: 7640, enlem: 36.99760440926185, boylam: 35.330936908721924 },
+      { id: 7650, enlem: 37.02367449067637, boylam: 35.28741002082825 },
+      { id: 7660, enlem: 37.0056971151647, boylam: 35.23240327835083 },
+      { id: 7680, enlem: 37.05855054141412, boylam: 35.29485046863556 },
+      { id: 7710, enlem: 37.00798039621451, boylam: 35.34251868724823 },
+      { id: 7720, enlem: 36.986862785990404, boylam: 35.37892699241638 },
+      { id: 7730, enlem: 37.01815365725146, boylam: 35.40162920951843 },
+      { id: 7735, enlem: 37.01815365725146, boylam: 35.40162920951843 },
+      { id: 7740, enlem: 37.028766664795, boylam: 35.40502488613129 },
+      { id: 7750, enlem: 36.84511326837914, boylam: 35.338870882987976 },
+      { id: 7760, enlem: 37.019130218667186, boylam: 35.320948362350464 },
+      { id: 7780, enlem: 37.02856110003829, boylam: 35.35576343536377 },
+      { id: 7790, enlem: 36.97930803550234, boylam: 35.36917984485626 },
+      { id: 7810, enlem: 36.976106789037566, boylam: 35.3458446264267 },
+      { id: 7820, enlem: 37.045047339207095, boylam: 35.49505591392517 },
+      { id: 7830, enlem: 36.986862785990404, boylam: 35.37892699241638 },
+      { id: 7840, enlem: 36.973016837085005, boylam: 35.30623376369476 },
+      { id: 7850, enlem: 36.98455744535248, boylam: 35.28114974498749 },
+      { id: 7860, enlem: 36.99760440926185, boylam: 35.330936908721924 },
+      { id: 7870, enlem: 36.99686321315014, boylam: 35.290199518203735 },
+      { id: 7895, enlem: 36.97680104669491, boylam: 35.33677339553833 },
+      { id: 7910, enlem: 37.02367449067637, boylam: 35.28741002082825 },
+      { id: 7920, enlem: 36.99760440926185, boylam: 35.330936908721924 },
+      { id: 7930, enlem: 37.019130218667186, boylam: 35.320948362350464 },
+      { id: 7940, enlem: 36.99415114498988, boylam: 35.436787605285645 },
+      { id: 7950, enlem: 37.05529269637361, boylam: 35.38502097129822 },
+      { id: 7960, enlem: 37.05529269637361, boylam: 35.38502097129822 },
+    ];
+
+    // Haritayı oluştur
+
+    fetch("vaka.json")
+      .then((response) => response.json())
+      .then((data) => {
+        jsonData = data;
+
+        // Koordinatları haritaya ekle
+                    jsonData.forEach(item => {
+                        const enlem = item[3];
+                        const boylam = item[4];
+
+        // Küçük noktaları temsil eden circleMarker kullan
+                        var circleMarker = L.circleMarker([enlem, boylam], { radius: 0.001 }).addTo(map);
+                        circleMarker.setStyle({ color: 'red' });
+      })
+
+      //console.log('JSON verisi başarıyla yüklendi ve haritaya eklendi.');
+      .catch((error) =>
+        console.error("JSON verisi yüklenirken bir hata oluştu:", error)
+      );
+
+    map = L.map("map").setView([37.0, 35.3213], 12);
+
+    // OpenStreetMap katmanını ekle
+    L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+      attribution: "© OpenStreetMap contributors",
+    }).addTo(map);
+
+    //let mLayer = L.geoJSON().on('click', mClickHandler);
+
+    let mLayer = L.geoJSON().addTo(map);
+    // Yerel dosyadan veriyi al
+    mLayer.clearLayers();
+
+    // Yerel dosyadan veriyi al
+
+    function mEkle() {
+      fetch("Adana.geojson")
+        .then((response) => response.json())
+        .then((data) => {
+          // Mahalle katmanına veriyi ekle
+          mLayer.addData(data);
+
+          // Mahalle katmanını haritaya ekle
+          mLayer.addTo(map);
+
+          // Haritayı mahalle sınırlarına otomatik olarak odakla
+          map.fitBounds(mLayer.getBounds());
+
+          // Mahalle koordinatları içindeki veri sayılarını hesapla ve popup ile göster
+          mLayer.eachLayer((layer) => {
+            const mLayerK = jsonData.filter((item) => {
+              const enlem = item[3];
+              const boylam = item[4];
+
+              if (isNaN(enlem) || isNaN(boylam)) {
+                return false; // Bu koordinatları filtrele
+              }
+
+              return layer.getBounds().contains([enlem, boylam]);
+            });
+
+            const vakaSayisi = mLayerK.length;
+
+            // Popup içeriğini oluştur
+            const popupContent = `<br> ${layer.feature.properties.name} Vaka Sayısı: ${vakaSayisi}`;
+            // Mahalle sınırlarına popup ekleyerek bilgileri göster
+            layer.bindPopup(popupContent);
+          });
+        })
+        .catch((error) => console.error("GeoJSON verisi alınamadı:", error));
+    }
+
+    ekipKoordinatlar.forEach((ekip) => {
+      const marker = L.marker([ekip.enlem, ekip.boylam], {
+        alt: String(ekip.id),
+      })
+        .addTo(map)
+        .bindPopup(String(ekip.id));
+    });
+
+    //      mEkle();
+    function mClickHandler(event) {
+      var coordinates = event.latlng;
+      var numberOfCoordinates = event.layer.options.numberOfCoordinates;
+
+      L.popup()
+        .setLatLng(coordinates)
+        .setContent(
+          "Bu mahalle sınırları içinde " +
+          numberOfCoordinates +
+          " koordinat bulunmaktadır."
+        )
+        .openOn(map);
+    }
+
+    map.on("draw:created", function (event) {
+      const layer = event.layer;
+      // İşaretli bölgeyi kalıcı olarak sakla
+      seciliBolge = layer.addTo(map);
+
+      // İşaretli bölgedeki koordinatları içeren JSON verisi
+      const isaretliBolgeJson = jsonData.filter((item) => {
+        const enlem = item[3];
+        const boylam = item[4];
+        return layer.getBounds().contains([enlem, boylam]);
+      });
+
+      // İşaretli bölgedeki koordinat sayısını yazdır
+      const koordinatSayisi = isaretliBolgeJson.length;
+      console.log("İşaretli Bölgedeki Koordinat Sayısı:", koordinatSayisi);
+
+      // İşaretli bölge içine koordinat sayısını yaz
+      let popup =
+        "İşaretli Bölgedeki Vaka Sayısı: " + isaretliBolgeJson.length;
+      seciliBolge.bindPopup(popup).openPopup();
+      console.log(
+        "İşaretli Bölgedeki Koordinat Sayısı:",
+        isaretliBolgeJson.length
+      );
+    });
+
+    // Mouse ile çizim eklentisini etkinleştir
+    const drawControl = new L.Control.Draw({
+      draw: {
+        polygon: true,
+        polyline: false,
+        rectangle: false,
+        circle: true,
+        marker: false,
+      },
+      edit: {
+        featureGroup: new L.FeatureGroup(),
+      },
+    });
+    map.addControl(drawControl);
+
+    function mSil() {
+      mLayer.clearLayers();
+    }
+
+    function vEkle() {
+      // jsonData içindeki koordinatları haritaya ekle
+      jsonData.forEach(item => {
+        const enlem = item[3];
+        const boylam = item[4];
+
+        // Küçük noktaları temsil eden circleMarker kullan
+        var circleMarker = L.circleMarker([enlem, boylam], { radius: 0.001 }).addTo(map);
+        circleMarker.setStyle({ color: 'red' });
+      });
+
+      console.log('JSON verisi başarıyla haritaya eklendi.');
+    }
+
+    function vSil() {
+      // Haritadaki JSON verisi katmanını kaldır
+      map.eachLayer(layer => {
+        if (layer instanceof L.CircleMarker) {
+          map.removeLayer(layer);
+        }
+      });
+
+      console.log('JSON verisi haritadan kaldırıldı.');
+    }
+  </script>
+</body>
+
+</html>
